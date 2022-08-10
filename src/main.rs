@@ -17,6 +17,7 @@ fn main() {
     let mut loop_counter: u64 = 0;
     let mut fake_counter: u8 = 0;
     let (datasender, datareceiver) = channel::<DataContainer>();
+    //The bug causes this unbounded channel to grow infinitely and cause an OOM error as t => inf
     let mut data = DataContainer {
         internal_count: 0,
         fake_vector: [127; 10240]
@@ -40,10 +41,9 @@ fn main() {
         datasender.send(data);
 
         while loop_start.elapsed().as_micros() < MAIN_SLEEP_TIME {
-
+            //This loop causes the loop in write_thread too always take ~MAIN_SLEEP_TIME to complete
+            //This is also the case if replaced with thread::sleep(time::Duration::from_micros(MAIN_SLEEP_TIME))
         }
-
-
     }
 
 }
@@ -57,6 +57,7 @@ fn write_thread(receiver: Receiver<DataContainer>) {
             .recv_timeout(time::Duration::from_millis(50)).unwrap();
         file.write_all(&reecived_data.fake_vector);
         println!("Wrote loop {}! This took {} us!", write_counter, now.elapsed().as_micros());
+        //This println will print something akin to "Wrote loop [n]! This took [~MAIN_SLEEP_TIME] us!"
         write_counter += 1;
     }
 }
