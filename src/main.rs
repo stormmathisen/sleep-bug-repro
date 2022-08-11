@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::fs::File;
 
 
-const MAIN_SLEEP_TIME: u128 = 2500; //Number of micros to sleep for
+const MAIN_SLEEP_TIME: u64 = 2500; //Number of micros to sleep for
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
@@ -43,10 +43,7 @@ fn main() {
 
         datasender.send(data);
 
-        while loop_start.elapsed().as_micros() < MAIN_SLEEP_TIME {
-            //This loop causes the loop in write_thread too always take ~MAIN_SLEEP_TIME to complete
-            //This is also the case if replaced with thread::sleep(time::Duration::from_micros(MAIN_SLEEP_TIME))
-        }
+        thread::sleep(time::Duration::from_micros(MAIN_SLEEP_TIME))
     }
 
 }
