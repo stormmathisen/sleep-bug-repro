@@ -1,11 +1,12 @@
 use std::{thread, time};
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::{atomic::{AtomicBool, Ordering}, mpsc::{channel, Receiver}};
 use std::io::prelude::*;
 use std::fs::File;
 
 
 const MAIN_SLEEP_TIME: u128 = 2500; //Number of micros to sleep for
 
+static DONE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 struct DataContainer{
@@ -14,6 +15,8 @@ struct DataContainer{
 }
 
 fn main() {
+    ctrlc::set_handler(|| DONE.store(true, Ordering::SeqCst));
+
     let mut loop_counter: u64 = 0;
     let mut fake_counter: u8 = 0;
     let (datasender, datareceiver) = channel::<DataContainer>();
@@ -27,7 +30,7 @@ fn main() {
         write_thread(datareceiver);
     });
 
-    loop {
+    while !DONE.load(Ordering::Relaxed) {
 
         let loop_start = time::Instant::now();
         
@@ -51,7 +54,7 @@ fn main() {
 fn write_thread(receiver: Receiver<DataContainer>) {
     let mut write_counter = 0;
     let mut file = File::create("output.bin").unwrap();
-    loop {
+    while !DONE.load(Ordering::Relaxed) {
         let now = time::Instant::now();
         let reecived_data = receiver
             .recv_timeout(time::Duration::from_millis(50)).unwrap();
