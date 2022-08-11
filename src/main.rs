@@ -39,7 +39,7 @@ fn main() {
             fake_vector: [fake_counter; 10240]
         };
         loop_counter += 1;
-        fake_counter += 1;
+        fake_counter = fake_counter.wrapping_add(1);
 
         datasender.send(data);
 
