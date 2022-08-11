@@ -26,7 +26,9 @@ fn main() -> Result<()> {
     let mut fake_counter: u8 = 0;
     let (datasender, datareceiver) = sync_channel::<DataContainer>(4);
 
-    let write_thread = thread::spawn(move || write_thread(datareceiver));
+    let file = File::create("output.bin").context("Couldn't create output file")?;
+
+    let write_thread = thread::spawn(move || write_thread(datareceiver, file));
 
     while !DONE.load(Ordering::Relaxed) {
         let loop_start = time::Instant::now();
@@ -65,9 +67,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn write_thread(receiver: Receiver<DataContainer>) -> Result<()> {
-    let mut file = File::create("output.bin").context("Couldn't create output file")?;
-
+fn write_thread(receiver: Receiver<DataContainer>, mut file: File) -> Result<()> {
     let mut start = time::Instant::now();
 
     while let Ok(received_data) = receiver.recv() {
