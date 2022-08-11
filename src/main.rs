@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     let write_thread = thread::spawn(move || write_thread(datareceiver, file));
 
     while !DONE.load(Ordering::Relaxed) {
-        let loop_start = time::Instant::now();
+        let end_at = time::Instant::now() + MAIN_SLEEP_TIME;
 
         let data = DataContainer {
             internal_count: loop_counter,
@@ -52,12 +52,8 @@ fn main() -> Result<()> {
             }
         }
 
-        let loop_end = time::Instant::now();
-
-        let dt = loop_end - loop_start;
-
-        if dt < MAIN_SLEEP_TIME {
-            thread::sleep(MAIN_SLEEP_TIME - dt);
+        while time::Instant::now() < end_at {
+            std::hint::spin_loop();
         }
     }
 
