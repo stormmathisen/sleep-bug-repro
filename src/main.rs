@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    mpsc::{sync_channel, Receiver},
+    mpsc::{sync_channel, Receiver, TrySendError},
 };
 use std::time::Duration;
 use std::{thread, time};
@@ -38,10 +38,16 @@ fn main() -> Result<()> {
         loop_counter += 1;
         fake_counter = fake_counter.wrapping_add(1);
 
-        if datasender.send(data).is_err() {
-            // The receiving side hung up!
-            // Bounce out of hte loop to see what error it had.
-            break;
+        match datasender.try_send(data) {
+            Ok(()) => {} // cool
+            Err(TrySendError::Full(_)) => {
+                println!("DANGER WILL ROBINSON - writer not keeping up!")
+            }
+            Err(TrySendError::Disconnected(_)) => {
+                // The receiving side hung up!
+                // Bounce out of the loop to see what error it had.
+                break;
+            }
         }
 
         let loop_end = time::Instant::now();
