@@ -2,9 +2,10 @@ use std::{thread, time};
 use std::sync::{atomic::{AtomicBool, Ordering}, mpsc::{channel, Receiver}};
 use std::io::prelude::*;
 use std::fs::File;
+use std::time::Duration;
 
 
-const MAIN_SLEEP_TIME: u64 = 2500; //Number of micros to sleep for
+const MAIN_SLEEP_TIME: Duration = Duration::from_micros(2500);
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
@@ -43,7 +44,13 @@ fn main() {
 
         datasender.send(data);
 
-        thread::sleep(time::Duration::from_micros(MAIN_SLEEP_TIME))
+        let loop_end = time::Instant::now();
+
+        let dt = loop_end - loop_start;
+
+        if dt < MAIN_SLEEP_TIME {
+            thread::sleep(MAIN_SLEEP_TIME - dt)
+        }
     }
 
 }
