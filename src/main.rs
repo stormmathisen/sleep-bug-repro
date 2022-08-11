@@ -16,7 +16,7 @@ struct DataContainer{
 }
 
 fn main() {
-    ctrlc::set_handler(|| DONE.store(true, Ordering::SeqCst));
+    ctrlc::set_handler(|| DONE.store(true, Ordering::SeqCst)).unwrap();
 
     let mut loop_counter: u64 = 0;
     let mut fake_counter: u8 = 0;
