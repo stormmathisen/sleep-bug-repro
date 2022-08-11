@@ -68,21 +68,41 @@ fn main() -> Result<()> {
 }
 
 fn write_thread(receiver: Receiver<DataContainer>, mut file: File) -> Result<()> {
+    // Average the last 1000 waits
+    let mut waits: [u16; 1000] = [0; 1000];
+    let mut waits_wrapped = false;
+    let mut wait_index: usize = 0;
+
     let mut start = time::Instant::now();
 
     while let Ok(received_data) = receiver.recv() {
         let wait_done = time::Instant::now();
-        let wait = wait_done - start;
+        let wait = (wait_done - start).as_micros();
+
+        assert!(wait < u16::MAX as u128);
+        waits[wait_index] = wait as u16;
+        wait_index += 1;
+        if wait_index >= waits.len() {
+            wait_index = 0;
+            waits_wrapped = true;
+        }
+
+        let waits_to_average = if waits_wrapped {
+            &waits
+        } else {
+            &waits[0..wait_index]
+        };
+
+        let avg = waits_to_average.iter().fold(0u64, |acc, w| acc + *w as u64)
+            / waits_to_average.len() as u64;
 
         file.write_all(&received_data.fake_vector)
             .context("Couldn't write output")?;
-        let wrote = time::Instant::now() - wait_done;
+        let wrote = (time::Instant::now() - wait_done).as_micros();
 
         println!(
-            "Wrote {}! (waited {} us, wrote {} us)",
-            received_data.internal_count,
-            wait.as_micros(),
-            wrote.as_micros()
+            "Wrote {}! (waited {} us ({} avg), wrote {} us)",
+            received_data.internal_count, wait, avg, wrote
         );
 
         // Account for the time spent blocking for input
